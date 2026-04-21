@@ -68,13 +68,23 @@ def buscar_sqls_crm(token: str) -> tuple[list, str | None]:
     return unique, None
 
 
+def _stage_entry_date(deal: dict) -> str:
+    """Retorna a data em que o deal entrou na etapa SQL.
+    Prioridade: deal_stage_histories.start_date → updated_at → created_at."""
+    for h in deal.get("deal_stage_histories", []):
+        if h.get("deal_stage_id") == STAGE_SQL_ID and not h.get("end_date"):
+            return h["start_date"]
+    return deal.get("updated_at") or deal.get("created_at", "")
+
+
 def deals_para_rows(deals: list) -> list:
     """Converte lista de deals da RD Station para linhas prontas para o SQLite."""
     now  = datetime.utcnow().isoformat()
     rows = []
     for deal in deals:
+        raw_date = _stage_entry_date(deal)
         try:
-            dt = datetime.fromisoformat(deal["created_at"]).replace(tzinfo=None)
+            dt = datetime.fromisoformat(raw_date).replace(tzinfo=None)
         except (KeyError, ValueError, TypeError):
             continue
         rows.append({

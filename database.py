@@ -48,6 +48,10 @@ def upsert_deal(conn, row: dict):
         INSERT INTO sqls (id, created_at, week, month, year, state, lead_source, sql_count, synced_at)
         VALUES (:id, :created_at, :week, :month, :year, :state, :lead_source, :sql_count, :synced_at)
         ON CONFLICT(id) DO UPDATE SET
+            created_at  = excluded.created_at,
+            week        = excluded.week,
+            month       = excluded.month,
+            year        = excluded.year,
             state       = excluded.state,
             lead_source = excluded.lead_source,
             synced_at   = excluded.synced_at
