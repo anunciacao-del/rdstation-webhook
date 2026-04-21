@@ -40,14 +40,12 @@ def _norm_source(name: str) -> str:
 def buscar_sqls_crm(token: str) -> tuple[list, str | None]:
     unique: list = []
     seen:   set  = set()
-    next_pg = None
+    page = 1
 
     while True:
-        params = {"token": token, "deal_stage_id": STAGE_SQL_ID, "limit": 200}
-        if next_pg:
-            params["page"] = next_pg
+        params = {"token": token, "deal_stage_id": STAGE_SQL_ID, "limit": 200, "page": page}
         try:
-            r = requests.get(f"{_BASE_URL}/deals", params=params, timeout=15)
+            r = requests.get(f"{_BASE_URL}/deals", params=params, timeout=30)
             r.raise_for_status()
         except requests.RequestException as exc:
             return unique, str(exc)
@@ -55,20 +53,17 @@ def buscar_sqls_crm(token: str) -> tuple[list, str | None]:
         data  = r.json()
         batch = data.get("deals", [])
 
-        # Detecta cursor circular: se nenhum deal da página é novo, para
-        new_in_batch = [d for d in batch if d["_id"] not in seen]
-        if not new_in_batch:
+        if not batch:
             break
 
-        for d in new_in_batch:
-            seen.add(d["_id"])
-            unique.append(d)
+        for d in batch:
+            if d["_id"] not in seen:
+                seen.add(d["_id"])
+                unique.append(d)
 
         if not data.get("has_more"):
             break
-        next_pg = data.get("next_page")
-        if not next_pg:
-            break
+        page += 1
 
     return unique, None
 
